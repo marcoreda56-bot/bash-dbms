@@ -7,7 +7,7 @@ then
     exit 1
 fi
 
-# -------- Load Meta --------
+
 mapfile -t meta_lines < "$DB_PATH/${tname}_meta"
 expected_cols=${#meta_lines[@]}
 
@@ -75,7 +75,7 @@ if [[ "$ctype" == "Int" && ! "$newValue" =~ ^[0-9]+$ ]]; then
     continue
 fi
 
-# -------- PK Check (STRICT) --------
+
 if [[ "$ispk" == "yes" ]]; then
     line_num=1
     while IFS=',' read -ra cols; do
