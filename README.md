@@ -21,6 +21,8 @@ This project is developed as part of **ITI – Open Source Track** training.
 ## 👨‍💻 Author
 
 **Marco Reda**  
+**Ehdaa Abdala**  
+
 Software Engineer & Full-Stack Developer  
 ITI – Open Source Track  
 
