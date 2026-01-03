@@ -1,25 +1,71 @@
-echo -ne "${LCYAN}Table Name : ${NC}";
+echo -ne "${LCYAN}Table Name : ${NC}"
 read tname
-            [ ! -f "$DB_PATH/$tname" ] && echo -e "${LRED}❌ Not found!${NC}" && continue
-            row=""; col_idx=1
-            mapfile -t meta_lines < "$DB_PATH/${tname}_meta"
-            for line in "${meta_lines[@]}";
-            do
-            cname=$(echo "$line" | cut -d':' -f1); ctype=$(echo "$line" | cut -d':' -f2); ispk=$(echo "$line" | cut -d':' -f3)
-                while true; do
-                    echo -ne "${WHITE}$cname ($ctype) $([[ "$ispk" == "yes" ]] && echo -e "${LYELLOW}[PK]${NC}"): "
-                    read val
-                    val=$(echo "$val" | xargs)
-                    [[ -z "$val" || "$val" == *","* ]] && echo -e "${LRED}❌ Invalid!${NC}" && continue
-                    if [[ "$ispk" == "yes" ]]; then
-                        exists=$(awk -F',' -v v="$val" -v c="$col_idx" '$c == v {print "1"}' "$DB_PATH/$tname")
-                        [[ "$exists" == "1" ]] && echo -e "${LRED}❌ PK Exists!${NC}" && continue
-                    fi
-                    [[ "$ctype" == "Int" && ! "$val" =~ ^[0-9]+$ ]] && echo -e "${LRED}❌ Must be Int!${NC}" && continue
+
+# -------- Check Table --------
+if [[ ! -f "$DB_PATH/$tname" || ! -f "$DB_PATH/${tname}_meta" ]]; then
+    echo -e "${LRED}❌ Table not found!${NC}"
+    continue
+fi
+
+# -------- Load Meta --------
+mapfile -t meta_lines < "$DB_PATH/${tname}_meta"
+expected_cols=${#meta_lines[@]}
+
+# -------- Table Integrity Check --------
+if [[ -s "$DB_PATH/$tname" ]]; then
+    line_num=1
+    while IFS=',' read -ra cols; do
+        if (( ${#cols[@]} != expected_cols )); then
+            echo -e "${LRED}❌ Corrupted row at line $line_num${NC}"
+            continue 2
+        fi
+        ((line_num++))
+    done < "$DB_PATH/$tname"
+fi
+
+row=""
+col_idx=1
+
+# -------- Read Values --------
+for line in "${meta_lines[@]}"; do
+    cname=$(cut -d':' -f1 <<< "$line")
+    ctype=$(cut -d':' -f2 <<< "$line")
+    ispk=$(cut -d':' -f3 <<< "$line")
+
+    while true; do
+        echo -ne "${WHITE}$cname ($ctype) $([[ "$ispk" == "yes" ]] && echo -e "${LYELLOW}[PK]${NC}"): "
+        read val
+        val=$(echo "$val" | xargs)
+
+        [[ -z "$val" || "$val" == *","* ]] && echo -e "${LRED}❌ Invalid value${NC}" && continue
+
+        # ---- Type Check ----
+        if [[ "$ctype" == "Int" && ! "$val" =~ ^[0-9]+$ ]]; then
+            echo -e "${LRED}❌ Must be Int${NC}"
+            continue
+        fi
+
+        # ---- PK Check (STRICT) ----
+        if [[ "$ispk" == "yes" && -s "$DB_PATH/$tname" ]]; then
+            exists="false"
+            while IFS=',' read -ra cols; do
+                if [[ "$(echo "${cols[$((col_idx-1))]}" | xargs)" == "$val" ]]; then
+                    exists="true"
                     break
-                done
-                row+="$val,"; ((col_idx++))
-            done
-            echo "${row%,}" >> "$DB_PATH/$tname";
-            echo -e "${LGREEN}✅ Row Added.${NC}"; 
+                fi
+            done < "$DB_PATH/$tname"
+
+            [[ "$exists" == "true" ]] && echo -e "${LRED}❌ PK Exists!${NC}" && continue
+        fi
+
+        break
+    done
+
+    row+="$val,"
+    ((col_idx++))
+done
+
+# -------- Insert Row (Atomic) --------
+echo "${row%,}" >> "$DB_PATH/$tname"
+echo -e "${LGREEN}✅ Row Added Successfully${NC}"
 

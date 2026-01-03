@@ -1,1 +1,2 @@
-ls -1 "$DB_PATH" | grep -v "_meta" | sed 's/^/  • /'
+ls -1 "$DB_PATH" | grep -Ev '(_meta$|\.csv$)' | sed 's/^/  • /'
+

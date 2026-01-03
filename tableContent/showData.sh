@@ -1,57 +1,97 @@
-echo -ne "${LCYAN}Table Name: ${NC}"
+#!/bin/bash
+
+echo -ne "Table Name: "
 read tname
 
-if [ -f "$DB_PATH/$tname" ]; then
+if [[ ! -f "$DB_PATH/$tname" || ! -f "$DB_PATH/${tname}_meta" ]]; then
+    echo "❌ Table or Meta not found!"
+    exit 1
+fi
 
-    echo -e "${WHITE}1) Show All Columns${NC}\n${WHITE}2) Select Specific Columns${NC}"
-    echo -ne "${BOLD}Choice: ${NC}"
-    read show_choice
+mapfile -t meta < "$DB_PATH/${tname}_meta"
+cols_count=${#meta[@]}
+total_rows=$(wc -l < "$DB_PATH/$tname")
 
-    if [[ "$show_choice" == "1" ]]; then
-        # Show all columns
-        header=$(awk -F':' 'BEGIN{ORS=","} {print $1}' "$DB_PATH/${tname}_meta" | sed 's/,$//')
-        echo -e "\n${BOLD}${WHITE}--- $tname ---${NC}"
-        (echo -e "${LGREEN}$header${NC}"; cat "$DB_PATH/$tname") | column -t -s ','
+line=1
+while IFS=',' read -ra row; do
+    if (( ${#row[@]} != cols_count )); then
+        echo "❌ Corrupted row at line $line"
+        exit 1
+    fi
+    ((line++))
+done < "$DB_PATH/$tname"
 
-    elif [[ "$show_choice" == "2" ]]; then
-        # Select specific columns
-        echo -e "${LPURPLE}Available Columns:${NC}"
-        awk -F':' '{print NR") " $1}' "$DB_PATH/${tname}_meta"
+echo "1) Show All Columns (All Rows)"
+echo "2) Select Specific Columns (All Rows)"
+echo "3) Show Single Row"
+echo "4) Get Cell (Row + Column)"
+echo -n "Choice: "
+read choice
 
-        echo -ne "${WHITE}Enter column names or numbers: ${NC}"
-        read user_input
+case $choice in
+1)
 
-        indices=$(awk -F':' -v inp="$user_input" '
-            BEGIN { split(inp, words, " ") }
-            { 
-                for (i in words) { 
-                    if (words[i] == NR || words[i] == $1) { 
-                        result[i] = NR 
-                    } 
-                } 
-            } 
-            END { 
-                for (j=1; j<=length(words); j++) 
-                    printf "%s ", result[j] 
-            }' "$DB_PATH/${tname}_meta")
+    header=$(awk -F':' '{print $1}' "$DB_PATH/${tname}_meta" | paste -sd "," -)
+    (echo "$header"; cat "$DB_PATH/$tname") | column -t -s ','
+    ;;
 
-        if [ -z "$(echo $indices | xargs)" ]; then
-            echo -e "${LRED}❌ No valid columns!${NC}"
-        else
-            header=$(awk -F':' -v idx="$indices" '
-                BEGIN { split(idx,a," ") } 
-                { for(i in a) if(NR==a[i]) printf "%s ", $1 }' "$DB_PATH/${tname}_meta")
+2)
 
-            echo -e "\n${BOLD}${WHITE}--- Custom View: $tname ---${NC}"
-            (echo -e "${LGREEN}$header${NC}"; 
-             awk -F',' -v idx="$indices" '
-                 BEGIN { split(idx,a," ") } 
-                 { for(i in a) printf "%s ", $a[i]; print "" }' "$DB_PATH/$tname") | column -t
+    awk -F':' '{print NR") "$1}' "$DB_PATH/${tname}_meta"
+    echo -n "Enter column names or numbers: "
+    read input
+    indices=""
+    for w in $input; do
+        idx=$(awk -F':' -v w="$w" '($1==w || NR==w){print NR; exit}' "$DB_PATH/${tname}_meta")
+        if [[ -z "$idx" ]]; then
+            echo "❌ Invalid column: $w"
+            continue 2
         fi
+        indices+="$idx "
+    done
+    awk -F',' -v idx="$indices" 'BEGIN{split(idx,a," ")} {for(i in a) printf "%s ", $a[i]; print ""}' "$DB_PATH/$tname" | column -t
+    ;;
 
+3)
+
+    echo -n "Enter row number: "
+    read r
+    if ! [[ "$r" =~ ^[0-9]+$ ]] || (( r < 1 || r > total_rows )); then
+        echo "❌ Invalid row number"
+	continue
+    fi
+    row=$(head -n "$r" "$DB_PATH/$tname" | tail -n 1)
+    IFS=',' read -ra cols <<< "$row"
+    for col in "${cols[@]}"; do
+        echo -n "$col    "
+    done
+    echo
+    ;;
+
+4)
+
+    echo -n "Enter row number: "
+    read r
+    if ! [[ "$r" =~ ^[0-9]+$ ]] || (( r<1 || r>total_rows )); then
+        echo "❌ Invalid row number"
+	continue
     fi
 
-else
-    echo -e "${LRED}❌ Not found.${NC}"
-fi
+    awk -F':' '{print NR") "$1}' "$DB_PATH/${tname}_meta"
+    echo -n "Enter column number: "
+    read c
+    if ! [[ "$c" =~ ^[0-9]+$ ]] || (( c<1 || c>cols_count )); then
+        echo "❌ Invalid column number"
+        continue
+    fi
+
+    cell=$(head -n "$r" "$DB_PATH/$tname" | tail -n 1 | awk -F',' -v col="$c" '{print $col}')
+    colname=$(sed -n "${c}p" "$DB_PATH/${tname}_meta" | cut -d':' -f1)
+    echo "Cell [$r,$colname] = $cell"
+    ;;
+
+*)
+    echo "❌ Invalid choice"
+    ;;
+esac
 
