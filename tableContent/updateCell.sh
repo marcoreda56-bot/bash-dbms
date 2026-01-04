@@ -1,5 +1,3 @@
-#!/bin/bash
-
 echo -ne "${LCYAN}Table Name : ${NC}"
 read tname
 
@@ -16,7 +14,7 @@ if [[ ! -s "$DB_PATH/$tname" ]]; then
     exit 1
 fi
 
-echo -e "\n--- Current Data ---"
+echo -e "\n${BOLD}${LCYAN}--- Current Data ---${NC}\n"
 cat -n "$DB_PATH/$tname"
 echo -e "--------------------"
 
