@@ -1,5 +1,11 @@
 echo -ne "Enter the table name you want to drop: "
 read tname
+tname=$(echo "$tname" | xargs)
+
+if [[ "$tname" == *"/"* || "$tname" == *".."* || -z "$tname" ]]; then
+    echo -e "${LRED}❌ Invalid table name! Paths are not allowed.${NC}"
+    continue
+fi
 
 if [ -f "$DB_PATH/$tname" ];
 then

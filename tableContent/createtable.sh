@@ -11,7 +11,8 @@ while true; do
     [[ -z "$tname" || ! "$tname" =~ $name_regex ]] && \
         echo -e "${LRED}❌ Invalid name! Use lowercase letters, numbers, _. Start with letter.${NC}" && continue
 
-    for w in $reserved_words; do
+    for w in $reserved_words; 
+    do
         [[ "$tname" == "$w" ]] && echo -e "${LRED}❌ Reserved word!${NC}" && continue 2
     done
 
@@ -23,7 +24,7 @@ done
 while true; do
     echo -ne "${LCYAN}Number of columns: ${NC}"
     read colnum
-    [[ "$colnum" =~ ^[0-9]+$ && "$colnum" -gt 0 ]] && break
+    [[ "$colnum" =~ ^[1-9][0-9]*$ && "$colnum" -gt 0 ]] && break
     echo -e "${LRED}❌ Enter a valid number.${NC}"
 done
 
@@ -59,7 +60,8 @@ for ((i=1; i<=colnum; i++)); do
     done
 
     # Column Type 
-    while true; do
+    while true; 
+    do
         echo -ne "Type (Int/String): "
         read coltype
         clean_type=$(echo "$coltype" | tr '[:upper:]' '[:lower:]' | xargs)
