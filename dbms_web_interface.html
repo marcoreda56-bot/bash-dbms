@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bash DBMS - Web Testing Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: #1e1e1e;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 800px;
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            background: #2d2d2d;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #444;
+        }
+
+        .terminal-button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .red { background: #ff5f56; }
+        .yellow { background: #ffbd2e; }
+        .green { background: #27c93f; }
+
+        .terminal-title {
+            color: #888;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .terminal-output {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .terminal-output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .terminal-output::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+
+        .terminal-output::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        .menu {
+            border: 2px solid #00ff00;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        .menu-title {
+            color: #ffff00;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .menu-item {
+            color: #00ffff;
+            margin: 5px 0;
+            cursor: pointer;
+            padding: 5px;
+            transition: background 0.2s;
+        }
+
+        .menu-item:hover {
+            background: #2d2d2d;
+        }
+
+        .prompt {
+            color: #ffff00;
+            margin-top: 10px;
+        }
+
+        .input-container {
+            background: #2d2d2d;
+            padding: 15px;
+            border-top: 1px solid #444;
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-container input {
+            flex: 1;
+            background: #1e1e1e;
+            border: 1px solid #555;
+            color: #00ff00;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            border-radius: 5px;
+        }
+
+        .input-container input:focus {
+            outline: none;
+            border-color: #00ff00;
+        }
+
+        .input-container button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .input-container button:hover {
+            background: #764ba2;
+        }
+
+        .error {
+            color: #ff5555;
+        }
+
+        .success {
+            color: #55ff55;
+        }
+
+        .info {
+            color: #5555ff;
+        }
+
+        table {
+            color: #00ffff;
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        table th, table td {
+            border: 1px solid #555;
+            padding: 8px;
+            text-align: left;
+        }
+
+        table th {
+            background: #2d2d2d;
+            color: #ffff00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="terminal-header">
+            <div class="terminal-button red"></div>
+            <div class="terminal-button yellow"></div>
+            <div class="terminal-button green"></div>
+            <div class="terminal-title">bash-dbms@localhost: ~</div>
+        </div>
+        <div class="terminal-output" id="output"></div>
+        <div class="input-container">
+            <input type="text" id="input" placeholder="Enter your choice..." autofocus>
+            <button onclick="processInput()">Execute</button>
+        </div>
+    </div>
+
+    <script>
+        let databases = {};
+        let currentDatabase = null;
+        let currentScreen = 'main';
+        let currentTable = null;
+        let waitingFor = null;
+        let tempData = {};
+
+        const output = document.getElementById('output');
+        const input = document.getElementById('input');
+
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') processInput();
+        });
+
+        const print = (text, type = '') => {
+            const line = document.createElement('div');
+            line.className = type;
+            line.textContent = text;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        };
+
+        const clearScreen = () => {
+            output.innerHTML = '';
+        };
+
+        const showMainMenu = () => {
+            clearScreen();
+            currentScreen = 'main';
+            print('==================================');
+            print('   DATABASE MANAGEMENT SYSTEM', 'menu-title');
+            print('==================================');
+            print('1. Create Database', 'menu-item');
+            print('2. List Databases', 'menu-item');
+            print('3. Connect to Database', 'menu-item');
+            print('4. Delete Database', 'menu-item');
+            print('5. Exit', 'menu-item');
+            print('==================================');
+            print('Enter your choice [1-5]:', 'prompt');
+        };
+
+        const showTableMenu = () => {
+            clearScreen();
+            currentScreen = 'table';
+            print('==================================');
+            print(`   DATABASE: ${currentDatabase}`, 'menu-title');
+            print('==================================');
+            print('1. Create Table', 'menu-item');
+            print('2. List Tables', 'menu-item');
+            print('3. Drop Table', 'menu-item');
+            print('4. Insert Row', 'menu-item');
+            print('5. Show Data', 'menu-item');
+            print('6. Delete Row', 'menu-item');
+            print('7. Update Cell', 'menu-item');
+            print('8. Search Data', 'menu-item');
+            print('9. Export to CSV', 'menu-item');
+            print('10. Back to Main Menu', 'menu-item');
+            print('==================================');
+            print('Enter your choice [1-10]:', 'prompt');
+        };
+
+        const validateName = (name) => {
+            if (!name) return 'Name cannot be empty!';
+            if (/^[0-9]/.test(name)) return 'Name cannot start with a number!';
+            if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) return 'Name can only contain letters, numbers, and underscores!';
+            return null;
+        };
+
+        const processInput = () => {
+            const value = input.value.trim();
+            input.value = '';
+
+            if (!value) return;
+
+            print('> ' + value, 'info');
+
+            if (waitingFor) {
+                handleWaitingInput(value);
+                return;
+            }
+
+            if (currentScreen === 'main') {
+                handleMainMenu(value);
+            } else if (currentScreen === 'table') {
+                handleTableMenu(value);
+            }
+        };
+
+        const handleMainMenu = (choice) => {
+            switch(choice) {
+                case '1':
+                    print('\n--- CREATE DATABASE ---');
+                    print('Enter database name:', 'prompt');
+                    waitingFor = 'db_name_create';
+                    break;
+                case '2':
+                    print('\n--- LIST OF DATABASES ---');
+                    if (Object.keys(databases).length === 0) {
+                        print('No databases found.', 'error');
+                    } else {
+                        Object.keys(databases).forEach(db => print(db, 'success'));
+                    }
+                    setTimeout(showMainMenu, 2000);
+                    break;
+                case '3':
+                    print('\n--- CONNECT TO DATABASE ---');
+                    print('Enter database name:', 'prompt');
+                    waitingFor = 'db_name_connect';
+                    break;
+                case '4':
+                    print('\n--- DELETE DATABASE ---');
+                    print('Enter database name:', 'prompt');
+                    waitingFor = 'db_name_delete';
+                    break;
+                case '5':
+                    print('\nThank you for using Database Management System!', 'success');
+                    print('Goodbye!', 'success');
+                    setTimeout(() => {
+                        clearScreen();
+                        print('System terminated. Refresh to restart.', 'info');
+                    }, 2000);
+                    break;
+                default:
+                    print('Invalid choice! Please enter a number between 1 and 5.', 'error');
+                    setTimeout(showMainMenu, 2000);
+            }
+        };
+
+        const handleTableMenu = (choice) => {
+            switch(choice) {
+                case '1':
+                    print('\n--- CREATE TABLE ---');
+                    print('Enter table name:', 'prompt');
+                    waitingFor = 'table_name_create';
+                    tempData = {};
+                    break;
+                case '2':
+                    print('\n--- LIST OF TABLES ---');
+                    if (Object.keys(databases[currentDatabase].tables).length === 0) {
+                        print('No tables found in this database.', 'error');
+                    } else {
+                        Object.keys(databases[currentDatabase].tables).forEach(tbl => print(tbl, 'success'));
+                    }
+                    setTimeout(showTableMenu, 2000);
+                    break;
+                case '3':
+                    print('\n--- DROP TABLE ---');
+                    print('Enter table name:', 'prompt');
+                    waitingFor = 'table_name_drop';
+                    break;
+                case '4':
+                    print('\n--- INSERT ROW ---');
+                    print('Enter table name:', 'prompt');
+                    waitingFor = 'table_name_insert';
+                    tempData = {};
+                    break;
+                case '5':
+                    print('\n--- SHOW DATA ---');
+                    print('Enter table name:', 'prompt');
+                    waitingFor = 'table_name_show';
+                    break;
+                case '6':
+                    print('\n--- DELETE ROW ---');
+                    print('Enter table name:', 'prompt');
+                    waitingFor = 'table_name_delete_row';
+                    break;
+                case '7':
+                    print('\n--- UPDATE CELL ---');
+                    print('Enter table name:', 'prompt');
+                    waitingFor = 'table_name_update';
+                    break;
+                case '8':
+                    print('\n--- SEARCH DATA ---');
+                    print('Enter table name:', 'prompt');
+                    waitingFor = 'table_name_search';
+                    break;
+                case '9':
+                    print('\n--- EXPORT TO CSV ---');
+                    print('Enter table name:', 'prompt');
+                    waitingFor = 'table_name_export';
+                    break;
+                case '10':
+                    currentDatabase = null;
+                    showMainMenu();
+                    break;
+                default:
+                    print('Invalid choice! Please enter a number between 1 and 10.', 'error');
+                    setTimeout(showTableMenu, 2000);
+            }
+        };
+
+        const handleWaitingInput = (value) => {
+            switch(waitingFor) {
+                case 'db_name_create':
+                    const error = validateName(value);
+                    if (error) {
+                        print('Error: ' + error, 'error');
+                        setTimeout(showMainMenu, 2000);
+                    } else if (databases[value]) {
+                        print(`Error: Database '${value}' already exists!`, 'error');
+                        setTimeout(showMainMenu, 2000);
+                    } else {
+                        databases[value] = { tables: {} };
+                        print(`Database '${value}' created successfully!`, 'success');
+                        setTimeout(showMainMenu, 2000);
+                    }
+                    waitingFor = null;
+                    break;
+
+                case 'db_name_connect':
+                    if (!databases[value]) {
+                        print(`Error: Database '${value}' does not exist!`, 'error');
+                        setTimeout(showMainMenu, 2000);
+                    } else {
+                        currentDatabase = value;
+                        showTableMenu();
+                    }
+                    waitingFor = null;
+                    break;
+
+                case 'db_name_delete':
+                    if (!databases[value]) {
+                        print(`Error: Database '${value}' does not exist!`, 'error');
+                        setTimeout(showMainMenu, 2000);
+                        waitingFor = null;
+                    } else {
+                        tempData.dbToDelete = value;
+                        print(`Are you sure you want to delete '${value}'? (yes/no):`, 'prompt');
+                        waitingFor = 'confirm_delete_db';
+                    }
+                    break;
+
+                case 'confirm_delete_db':
+                    if (value === 'yes' || value === 'y') {
+                        delete databases[tempData.dbToDelete];
+                        print(`Database '${tempData.dbToDelete}' deleted successfully!`, 'success');
+                    } else {
+                        print('Deletion cancelled.', 'info');
+                    }
+                    setTimeout(showMainMenu, 2000);
+                    waitingFor = null;
+                    tempData = {};
+                    break;
+
+                case 'table_name_create':
+                    const tblError = validateName(value);
+                    if (tblError) {
+                        print('Error: ' + tblError, 'error');
+                        setTimeout(showTableMenu, 2000);
+                        waitingFor = null;
+                    } else if (databases[currentDatabase].tables[value]) {
+                        print(`Error: Table '${value}' already exists!`, 'error');
+                        setTimeout(showTableMenu, 2000);
+                        waitingFor = null;
+                    } else {
+                        tempData.tableName = value;
+                        print('Enter number of columns:', 'prompt');
+                        waitingFor = 'table_columns';
+                    }
+                    break;
+
+                case 'table_columns':
+                    const numCols = parseInt(value);
+                    if (isNaN(numCols) || numCols < 1) {
+                        print('Error: Invalid number of columns!', 'error');
+                        setTimeout(showTableMenu, 2000);
+                        waitingFor = null;
+                    } else {
+                        tempData.numColumns = numCols;
+                        tempData.columns = [];
+                        tempData.currentCol = 0;
+                        print(`\nColumn 1 name:`, 'prompt');
+                        waitingFor = 'column_name';
+                    }
+                    break;
+
+                case 'column_name':
+                    const colError = validateName(value);
+                    if (colError) {
+                        print('Error: ' + colError, 'error');
+                        print(`Column ${tempData.currentCol + 1} name:`, 'prompt');
+                    } else {
+                        tempData.currentColName = value;
+                        print('Column data type:');
+                        print('1. Integer');
+                        print('2. String');
+                        print('Choice:', 'prompt');
+                        waitingFor = 'column_type';
+                    }
+                    break;
+
+                case 'column_type':
+                    const colType = value === '1' ? 'int' : 'string';
+                    if (tempData.currentCol === 0) {
+                        print('Is this a primary key? (yes/no):', 'prompt');
+                        tempData.currentColType = colType;
+                        waitingFor = 'column_pk';
+                    } else {
+                        tempData.columns.push({
+                            name: tempData.currentColName,
+                            type: colType,
+                            isPK: false
+                        });
+                        tempData.currentCol++;
+                        if (tempData.currentCol < tempData.numColumns) {
+                            print(`\nColumn ${tempData.currentCol + 1} name:`, 'prompt');
+                            waitingFor = 'column_name';
+                        } else {
+                            createTable();
+                        }
+                    }
+                    break;
+
+                case 'column_pk':
+                    const isPK = value === 'yes' || value === 'y';
+                    tempData.columns.push({
+                        name: tempData.currentColName,
+                        type: tempData.currentColType,
+                        isPK: isPK
+                    });
+                    tempData.currentCol++;
+                    if (tempData.currentCol < tempData.numColumns) {
+                        print(`\nColumn ${tempData.currentCol + 1} name:`, 'prompt');
+                        waitingFor = 'column_name';
+                    } else {
+                        createTable();
+                    }
+                    break;
+
+                case 'table_name_drop':
+                    if (!databases[currentDatabase].tables[value]) {
+                        print(`Error: Table '${value}' does not exist!`, 'error');
+                        setTimeout(showTableMenu, 2000);
+                        waitingFor = null;
+                    } else {
+                        tempData.tableToDelete = value;
+                        print(`Are you sure you want to drop '${value}'? (yes/no):`, 'prompt');
+                        waitingFor = 'confirm_drop_table';
+                    }
+                    break;
+
+                case 'confirm_drop_table':
+                    if (value === 'yes' || value === 'y') {
+                        delete databases[currentDatabase].tables[tempData.tableToDelete];
+                        print(`Table '${tempData.tableToDelete}' dropped successfully!`, 'success');
+                    } else {
+                        print('Drop cancelled.', 'info');
+                    }
+                    setTimeout(showTableMenu, 2000);
+                    waitingFor = null;
+                    tempData = {};
+                    break;
+
+                case 'table_name_insert':
+                    if (!databases[currentDatabase].tables[value]) {
+                        print(`Error: Table '${value}' does not exist!`, 'error');
+                        setTimeout(showTableMenu, 2000);
+                        waitingFor = null;
+                    } else {
+                        tempData.table = databases[currentDatabase].tables[value];
+                        tempData.tableName = value;
+                        tempData.rowData = [];
+                        tempData.currentCol = 0;
+                        const col = tempData.table.columns[0];
+                        print(`Enter ${col.name} (${col.type}):`, 'prompt');
+                        waitingFor = 'insert_value';
+                    }
+                    break;
+
+                case 'insert_value':
+                    const col = tempData.table.columns[tempData.currentCol];
+                    if (col.type === 'int' && !/^-?\d+$/.test(value)) {
+                        print('Error: Invalid integer value!', 'error');
+                        setTimeout(showTableMenu, 2000);
+                        waitingFor = null;
+                        tempData = {};
+                        break;
+                    }
+
+                    if (col.isPK) {
+                        const exists = tempData.table.rows.some(row => row[0] === value);
+                        if (exists) {
+                            print(`Error: Primary key '${value}' already exists!`, 'error');
+                            setTimeout(showTableMenu, 2000);
+                            waitingFor = null;
+                            tempData = {};
+                            break;
+                        }
+                    }
+
+                    tempData.rowData.push(value);
+                    tempData.currentCol++;
+
+                    if (tempData.currentCol < tempData.table.columns.length) {
+                        const nextCol = tempData.table.columns[tempData.currentCol];
+                        print(`Enter ${nextCol.name} (${nextCol.type}):`, 'prompt');
+                    } else {
+                        tempData.table.rows.push(tempData.rowData);
+                        print('Row inserted successfully!', 'success');
+                        setTimeout(showTableMenu, 2000);
+                        waitingFor = null;
+                        tempData = {};
+                    }
+                    break;
+
+                case 'table_name_show':
+                    if (!databases[currentDatabase].tables[value]) {
+                        print(`Error: Table '${value}' does not exist!`, 'error');
+                        setTimeout(showTableMenu, 2000);
+                    } else {
+                        const tbl = databases[currentDatabase].tables[value];
+                        print('\nColumns: ' + tbl.columns.map(c => c.name).join(' | '), 'success');
+                        print('---');
+                        if (tbl.rows.length === 0) {
+                            print('No data in table.', 'error');
+                        } else {
+                            tbl.rows.forEach(row => {
+                                print(row.join(' | '));
+                            });
+                        }
+                        setTimeout(showTableMenu, 3000);
+                    }
+                    waitingFor = null;
+                    break;
+
+                case 'table_name_delete_row':
+                    if (!databases[currentDatabase].tables[value]) {
+                        print(`Error: Table '${value}' does not exist!`, 'error');
+                        setTimeout(showTableMenu, 2000);
+                        waitingFor = null;
+                    } else {
+                        tempData.table = databases[currentDatabase].tables[value];
+                        if (tempData.table.rows.length === 0) {
+                            print('Error: No data in table!', 'error');
+                            setTimeout(showTableMenu, 2000);
+                            waitingFor = null;
+                        } else {
+                            print(`Enter ${tempData.table.columns[0].name} value to delete:`, 'prompt');
+                            waitingFor = 'delete_row_value';
+                        }
+                    }
+                    break;
+
+                case 'delete_row_value':
+                    const rowIdx = tempData.table.rows.findIndex(row => row[0] === value);
+                    if (rowIdx === -1) {
+                        print(`Error: Row with ${tempData.table.columns[0].name} '${value}' not found!`, 'error');
+                    } else {
+                        tempData.table.rows.splice(rowIdx, 1);
+                        print('Row deleted successfully!', 'success');
+                    }
+                    setTimeout(showTableMenu, 2000);
+                    waitingFor = null;
+                    tempData = {};
+                    break;
+
+                case 'table_name_update':
+                    if (!databases[currentDatabase].tables[value]) {
+                        print(`Error: Table '${value}' does not exist!`, 'error');
+                        setTimeout(showTableMenu, 2000);
+                        waitingFor = null;
+                    } else {
+                        tempData.table = databases[currentDatabase].tables[value];
+                        if (tempData.table.rows.length === 0) {
+                            print('Error: No data in table!', 'error');
+                            setTimeout(showTableMenu, 2000);
+                            waitingFor = null;
+                        } else {
+                            print('Enter row number to update:', 'prompt');
+                            waitingFor = 'update_row_num';
+                        }
+                    }
+                    break;
+
+                case 'update_row_num':
+                    const rowNum = parseInt(value);
+                    if (isNaN(rowNum) || rowNum < 1 || rowNum > tempData.table.rows.length) {
+                        print('Error: Invalid row number!', 'error');
+                        setTimeout(showTableMenu, 2000);
+                        waitingFor = null;
+                        tempData = {};
+                    } else {
+                        tempData.rowNum = rowNum - 1;
+                        print('Columns:');
+                        tempData.table.columns.forEach((c, i) => {
+                            print(`${i + 1}. ${c.name}`);
+                        });
+                        print('Enter column number to update:', 'prompt');
+                        waitingFor = 'update_col_num';
+                    }
+                    break;
+
+                case 'update_col_num':
+                    const colNum = parseInt(value);
+                    if (isNaN(colNum) || colNum < 1 || colNum > tempData.table.columns.length) {
+                        print('Error: Invalid column number!', 'error');
+                        setTimeout(showTableMenu, 2000);
+                        waitingFor = null;
+                        tempData = {};
+                    } else {
+                        tempData.colNum = colNum - 1;
+                        const updateCol = tempData.table.columns[tempData.colNum];
+                        print(`Enter new value for ${updateCol.name} (${updateCol.type}):`, 'prompt');
+                        waitingFor = 'update_value';
+                    }
+                    break;
+
+                case 'update_value':
+                    const updateCol = tempData.table.columns[tempData.colNum];
+                    if (updateCol.type === 'int' && !/^-?\d+$/.test(value)) {
+                        print('Error: Invalid integer value!', 'error');
+                        setTimeout(showTableMenu, 2000);
+                        waitingFor = null;
+                        tempData = {};
+                    } else {
+                        tempData.table.rows[tempData.rowNum][tempData.colNum] = value;
+                        print('Cell updated successfully!', 'success');
+                        setTimeout(showTableMenu, 2000);
+                        waitingFor = null;
+                        tempData = {};
+                    }
+                    break;
+
+                case 'table_name_search':
+                    if (!databases[currentDatabase].tables[value]) {
+                        print(`Error: Table '${value}' does not exist!`, 'error');
+                        setTimeout(showTableMenu, 2000);
+                        waitingFor = null;
+                    } else {
+                        tempData.table = databases[currentDatabase].tables[value];
+                        if (tempData.table.rows.length === 0) {
+                            print('Error: No data in table!', 'error');
+                            setTimeout(showTableMenu, 2000);
+                            waitingFor = null;
+                        } else {
+                            print('Search by column:');
+                            tempData.table.columns.forEach((c, i) => {
+                                print(`${i + 1}. ${c.name}`);
+                            });
+                            print('Enter column number:', 'prompt');
+                            waitingFor = 'search_col_num';
+                        }
+                    }
+                    break;
+
+                case 'search_col_num':
+                    const searchColNum = parseInt(value);
+                    if (isNaN(searchColNum) || searchColNum < 1 || searchColNum > tempData.table.columns.length) {
+                        print('Error: Invalid column number!', 'error');
+                        setTimeout(showTableMenu, 2000);
+                        waitingFor = null;
+                        tempData = {};
+                    } else {
+                        tempData.searchCol = searchColNum - 1;
+                        print('Enter search value:', 'prompt');
+                        waitingFor = 'search_value';
+                    }
+                    break;
+
+                case 'search_value':
+                    print('\nSearch Results:');
+                    print('Columns: ' + tempData.table.columns.map(c => c.name).join(' | '), 'success');
+                    print('---');
+                    const results = tempData.table.rows.filter(row => row[tempData.searchCol] === value);
+                    if (results.length === 0) {
+                        print('No matching records found.', 'error');
+                    } else {
+                        results.forEach(row => print(row.join(' | ')));
+                    }
+                    setTimeout(showTableMenu, 3000);
+                    waitingFor = null;
+                    tempData = {};
+                    break;
+
+                case 'table_name_export':
+                    if (!databases[currentDatabase].tables[value]) {
+                        print(`Error: Table '${value}' does not exist!`, 'error');
+                        setTimeout(showTableMenu, 2000);
+                    } else {
+                        const exportTable = databases[currentDatabase].tables[value];
+                        let csv = exportTable.columns.map(c => c.name).join(',') + '\n';
+                        exportTable.rows.forEach(row => {
+                            csv += row.join(',') + '\n';
+                        });
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${value}.csv`;
+                        a.click();
+                        print(`Table exported to: ${value}.csv`, 'success');
+                        setTimeout(showTableMenu, 2000);
+                    }
+                    waitingFor = null;
+                    break;
+            }
+        };
+
+        const createTable = () => {
+            databases[currentDatabase].tables[tempData.tableName] = {
+                columns: tempData.columns,
+                rows: []
+            };
+            print(`\nTable '${tempData.tableName}' created successfully!`, 'success');
+            setTimeout(showTableMenu, 2000);
+            waitingFor = null;
+            tempData = {};
+        };
+
+        // Initialize
+        showMainMenu();
+    </script>
+</body>
+</html>
