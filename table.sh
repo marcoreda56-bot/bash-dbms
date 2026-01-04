@@ -16,7 +16,8 @@ while true; do
     echo -e "${LYELLOW} 10)${NC} Main Menu"
     echo -e "${BOLD}${LCYAN}------------------------------------------------------${NC}"
     
-    echo -ne "${BOLD}${WHITE}👉 Choice: ${NC}"; read choice
+    echo -ne "${BOLD}${WHITE}👉 Choice: ${NC}"; 
+    read -r choice
 
     case $choice in
         1) 

@@ -16,10 +16,15 @@ fi
 echo -ne "${LCYAN}Enter database name to connect: ${NC}"
 read dbname
 dbname=$(echo "$dbname" | xargs)
+if [[ -z "$dbname" ]]; 
+then
+echo -ne "${LYELLOW}❌ Sorry can not be empty.${NC}"
+continue
+fi
 
 if [[ -d "$DB_folder/$dbname" ]]; then
     echo -e "${LGREEN}🚀 Connected to '$dbname'${NC}"
-    ./table.sh "$DB_folder/$dbname"
+    /home/marco/script/project/table.sh "$DB_folder/$dbname"
 else
     echo -e "${LRED}❌ Database '$dbname' does not exist!${NC}"
 fi

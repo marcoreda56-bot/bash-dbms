@@ -1,5 +1,5 @@
 echo -ne "${LCYAN}Table Name : ${NC}"
-read tname
+read -r tname
 
 if [[ ! -f "$DB_PATH/$tname" || ! -f "$DB_PATH/${tname}_meta" ]]; then
     echo -e "${LRED}❌ Table not found!${NC}"
@@ -19,7 +19,8 @@ cat -n "$DB_PATH/$tname"
 echo -e "--------------------"
 
 
-while true; do
+while true; 
+do
     echo -ne "${LCYAN}Row Number : ${NC}"
     read r
     r=$(echo "$r" | xargs)

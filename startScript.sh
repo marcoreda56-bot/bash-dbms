@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # --- PROFESSIONAL CONFIGURATION ---
-TARGET="./db.sh"
+TARGET="/home/marco/script/project/db.sh"
 SESSION_ID=$(head /dev/urandom | tr -dc A-Z0-9 | head -c 8)
 
 # --- COLOR PALETTE (Subtle & Professional) ---

@@ -1,5 +1,5 @@
 echo -ne "${LCYAN}Table Name : ${NC}"
-read tname
+read -r tname
 
 
 if [[ ! -f "$DB_PATH/$tname" || ! -f "$DB_PATH/${tname}_meta" ]]; then
@@ -32,9 +32,10 @@ for line in "${meta_lines[@]}"; do
     ctype=$(cut -d':' -f2 <<< "$line")
     ispk=$(cut -d':' -f3 <<< "$line")
 
-    while true; do
+    while true;
+    do
         echo -ne "${WHITE}$cname ($ctype) $([[ "$ispk" == "yes" ]] && echo -e "${LYELLOW}[PK]${NC}"): "
-        read val
+        read -r val
         val=$(echo "$val" | xargs)
 
         [[ -z "$val" || "$val" == *","* ]] && echo -e "${LRED}❌ Invalid value${NC}" && continue

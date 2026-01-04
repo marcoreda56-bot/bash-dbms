@@ -5,7 +5,7 @@ reserved_words="select insert delete update table where from join"
 
 while true; do
     echo -ne "${LCYAN}Enter table name: ${NC}"
-    read tname
+    read -r tname
     tname=$(echo "$tname" | tr '[:upper:]' '[:lower:]' | xargs)
 
     [[ -z "$tname" || ! "$tname" =~ $name_regex ]] && \
@@ -21,9 +21,10 @@ while true; do
 done
 
 
-while true; do
+while true; 
+do
     echo -ne "${LCYAN}Number of columns: ${NC}"
-    read colnum
+    read -r colnum
     [[ "$colnum" =~ ^[1-9][0-9]*$ && "$colnum" -gt 0 ]] && break
     echo -e "${LRED}❌ Enter a valid number.${NC}"
 done
@@ -38,9 +39,10 @@ for ((i=1; i<=colnum; i++)); do
     echo -e "${LPURPLE}--- Column $i ---${NC}"
 
     # Column Name
-    while true; do
+    while true; 
+    do
         echo -ne "Name: "
-        read colname
+        read -r colname
         colname=$(echo "$colname" | tr '[:upper:]' '[:lower:]' | xargs)
 
         [[ -z "$colname" || ! "$colname" =~ $name_regex ]] && \
@@ -63,7 +65,7 @@ for ((i=1; i<=colnum; i++)); do
     while true; 
     do
         echo -ne "Type (Int/String): "
-        read coltype
+        read -r coltype
         clean_type=$(echo "$coltype" | tr '[:upper:]' '[:lower:]' | xargs)
 
         if [[ "$clean_type" == "int" ]];
@@ -83,9 +85,10 @@ for ((i=1; i<=colnum; i++)); do
     is_pk="no"
     if [ "$pk_chosen" = false ]; then
         if [ "$i" -lt "$colnum" ]; then
-            while true; do
+            while true; 
+            do
                 echo -ne "${LYELLOW}Make PK? (y/n): ${NC}"
-                read ch
+                read -r ch
                 ch=$(echo "$ch" | tr '[:upper:]' '[:lower:]' | xargs)
 
                 if [[ "$ch" == "y" || "$ch" == "yes" ]];
@@ -103,7 +106,7 @@ for ((i=1; i<=colnum; i++)); do
             echo -e "${LRED}⚠️ No PK chosen! [y] Make PK, [r] Restart, [c] Cancel:${NC}"
             while true;
             do
-                read last_ch
+                read -r last_ch
                 last_ch=$(echo "$last_ch" | tr '[:upper:]' '[:lower:]' | xargs)
 
                 if [[ "$last_ch" == "y" || "$last_ch" == "yes" ]];

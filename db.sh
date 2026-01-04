@@ -21,8 +21,8 @@ while true; do
     echo -e "${BOLD}${LCYAN}======================================================${NC}"
     
     echo -ne "${BOLD}${WHITE}👉 Please enter your choice: ${NC}";
-    read choice
-
+    read -r choice
+    choice=$(echo "$choice" | xargs )
     case "$choice" in
         1)
             source /home/marco/script/project/databaseContent/createDatabase.sh

@@ -1,5 +1,5 @@
 echo -ne "Enter the table name you want to drop: "
-read tname
+read -r tname
 tname=$(echo "$tname" | xargs)
 
 if [[ "$tname" == *"/"* || "$tname" == *".."* || -z "$tname" ]]; then
@@ -12,7 +12,7 @@ then
     echo -e "Are you sure you want to drop the table '${tname}'?"
     echo -e "1. Yes\n2. No"
     
-    read check
+    read -r check
     check=$(echo "$check" | tr '[:upper:]' '[:lower:]' | xargs)
 
     if [[ "$check" == "1" || "$check" == "y" || "$check" == "yes" ]];

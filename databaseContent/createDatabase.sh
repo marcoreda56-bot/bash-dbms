@@ -1,8 +1,7 @@
 echo -ne "${LCYAN}Please enter name of database: ${NC}"
-	    read databaseName
+	    read -r databaseName
 
-
-	    databaseName=$(echo "$databaseName" | xargs)
+	    databaseName=$(echo "$databaseName" | tr -d '\\' | xargs )
 
 	    if [[ -z "$databaseName" ]]; then
 	    echo -e "${LRED}❌ Database name cannot be empty${NC}"

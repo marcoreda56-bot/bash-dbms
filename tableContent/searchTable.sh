@@ -1,5 +1,5 @@
 echo -ne "Enter Table Name: "
-read tname
+read -r tname
 
 if [ -f "$DB_PATH/$tname" ]; then
     echo -ne "Search about what?: "

@@ -1,5 +1,5 @@
 echo -ne "Table Name: "
-read tname
+read -r tname
 
 if [[ ! -f "$DB_PATH/$tname" || ! -f "$DB_PATH/${tname}_meta" ]]; 
 then
@@ -72,7 +72,7 @@ BEGIN { split(idx,a," ") }
 3)
 
     echo -n "Enter row number: "
-    read r
+    read -r r
     if ! [[ "$r" =~ ^[1-9][0-9]*$ ]] || (( r > total_rows )); then
     echo "❌ Invalid row number"
     continue
@@ -90,7 +90,8 @@ BEGIN { split(idx,a," ") }
 
     echo -n "Enter row number: "
     read r
-    if ! [[ "$r" =~ ^[0-9]+$ ]] || (( r<1 || r>total_rows )); then
+    if ! [[ "$r" =~ ^[1-9][0-9]*$ ]] || (( r<1 || r>total_rows )); 
+    then
         echo "❌ Invalid row number"
 	continue
     fi
@@ -98,7 +99,7 @@ BEGIN { split(idx,a," ") }
     awk -F':' '{print NR") "$1}' "$DB_PATH/${tname}_meta"
     echo -n "Enter column number: "
     read c
-    if ! [[ "$c" =~ ^[0-9]+$ ]] || (( c<1 || c>cols_count )); 
+    if ! [[ "$c" =~ ^[1-9][0-9]*$ ]] || (( c<1 || c>cols_count )); 
     then
         echo "❌ Invalid column number"
         continue
