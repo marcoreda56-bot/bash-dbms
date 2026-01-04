@@ -1,17 +1,17 @@
 echo -ne "${LCYAN}Table Name : ${NC}"
 read tname
 
-# -------- Check Table --------
+
 if [[ ! -f "$DB_PATH/$tname" || ! -f "$DB_PATH/${tname}_meta" ]]; then
     echo -e "${LRED}❌ Table not found!${NC}"
     continue
 fi
 
-# -------- Load Meta --------
+
 mapfile -t meta_lines < "$DB_PATH/${tname}_meta"
 expected_cols=${#meta_lines[@]}
 
-# -------- Table Integrity Check --------
+
 if [[ -s "$DB_PATH/$tname" ]]; then
     line_num=1
     while IFS=',' read -ra cols; do
@@ -26,7 +26,7 @@ fi
 row=""
 col_idx=1
 
-# -------- Read Values --------
+
 for line in "${meta_lines[@]}"; do
     cname=$(cut -d':' -f1 <<< "$line")
     ctype=$(cut -d':' -f2 <<< "$line")
@@ -45,7 +45,6 @@ for line in "${meta_lines[@]}"; do
             continue
         fi
 
-        # ---- PK Check (STRICT) ----
         if [[ "$ispk" == "yes" && -s "$DB_PATH/$tname" ]]; then
             exists="false"
             while IFS=',' read -ra cols; do
@@ -65,7 +64,6 @@ for line in "${meta_lines[@]}"; do
     ((col_idx++))
 done
 
-# -------- Insert Row (Atomic) --------
 echo "${row%,}" >> "$DB_PATH/$tname"
 echo -e "${LGREEN}✅ Row Added Successfully${NC}"
 
