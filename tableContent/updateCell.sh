@@ -3,7 +3,7 @@ read tname
 
 if [[ ! -f "$DB_PATH/$tname" || ! -f "$DB_PATH/${tname}_meta" ]]; then
     echo -e "${LRED}❌ Table not found!${NC}"
-    exit 1 
+    continue
 fi
 
 mapfile -t meta_lines < "$DB_PATH/${tname}_meta"
@@ -11,7 +11,7 @@ expected_cols=${#meta_lines[@]}
 
 if [[ ! -s "$DB_PATH/$tname" ]]; then
     echo -e "${LRED}❌ Table is empty${NC}"
-    exit 1
+    continue
 fi
 
 echo -e "\n${BOLD}${LCYAN}--- Current Data ---${NC}\n"
