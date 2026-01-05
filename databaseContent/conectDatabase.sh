@@ -14,8 +14,12 @@ if [[ "$found" == false ]]; then
 fi
 
 echo -ne "${LCYAN}Enter database name to connect: ${NC}"
-read dbname
+read -r dbname
 dbname=$(echo "$dbname" | xargs)
+if [[ "$dbname" == *"/"* || "$dbname" == *".."* || "$dbname" == *"."* ]]; then
+    echo -e "${LRED}❌ Invalid table name! Paths are not allowed.${NC}"
+    continue
+fi
 if [[ -z "$dbname" ]]; 
 then
 echo -ne "${LYELLOW}❌ Sorry can not be empty.${NC}"

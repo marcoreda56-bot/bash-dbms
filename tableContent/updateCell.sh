@@ -107,7 +107,7 @@ while true; do
 done
 
 awk -F',' -v r="$r" -v c="$c" -v v="$newValue" '
-    BEGIN { FS=OFS="," }
+    BEGIN { OFS="," }
     NR == r { $c = v }
     { print }
 ' "$DB_PATH/$tname" > "$DB_PATH/.tmp" && mv "$DB_PATH/.tmp" "$DB_PATH/$tname"
